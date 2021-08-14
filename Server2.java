@@ -37,24 +37,26 @@ class task implements Runnable
     public void run()
     {
         try {    
-        var reciver=new Scanner(s.getInputStream());
-        var sender=new PrintWriter(s.getOutputStream());
-        var localScanner=new Scanner(System.in);
-        boolean x=true;
-        while(true)
-        {
-            if(x)
+            var reciver=new Scanner(s.getInputStream(), "UTF-8");
+            var sender=new PrintWriter(new OutputStreamWriter(s.getOutputStream(),"UTF-8"),true);
+            var localScanner=new Scanner(System.in);
+            System.out.println("client connected");
+            boolean x=true;
+            while(true)
             {
-                System.out.println("waiting for client");
-                System.out.println("Client: "+reciver.next());
+                if(x)
+                {
+                    System.out.println("waiting for client");
+                    System.out.println("Client: "+reciver.nextLine());
+                    localScanner.reset();
+                }
+                    else
+                {
+                    sender.println(localScanner.nextLine());
+                    sender.flush();
+                }
+                x=!x;
             }
-                else
-            {
-                sender.write(localScanner.nextLine());
-                sender.flush();
-            }
-            x=!x;
-        }
        
         } catch (Exception e)
         { 
