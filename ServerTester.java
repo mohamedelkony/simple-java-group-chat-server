@@ -2,26 +2,9 @@
 import java.util.*;
 import java.net.*;
 import java.io.*;
+import org.json.*;
 
-class clientData implements Serializable {
-    private Integer id;
-    private int port;
 
-    public clientData(int id, int port) {
-        this.id = id;
-        this.port = port;
-    }
-
-    public int port() {
-        return port;
-    }
-
-    public int id() {
-        return id;
-    }
-
-    private static final long serialVersionUID = 5950169519310163575L;
-}
 
 public class ServerTester {
     public static void main(String[] args) {
@@ -48,7 +31,7 @@ class server {
     }
 
     List<clientData> data = new ArrayList<clientData>();
-    List<Socket> clients=new ArrayList<Socket>();
+    List<Socket> clients = new ArrayList<Socket>();
 
     class serverMonitor implements Runnable {
         Socket s;
@@ -58,25 +41,33 @@ class server {
         }
 
         public void run() {
-            ObjectOutputStream sender = null;
-            ObjectInputStream reader = null;
+            PrintWriter sender = null;
+            Scanner reader = null;
             try {
-                sender = new ObjectOutputStream(s.getOutputStream());
-                reader = new ObjectInputStream(s.getInputStream());
+                sender = new PrintWriter(new OutputStreamWriter(s.getOutputStream(), "UTF-8"), true);
+                reader = new Scanner(s.getInputStream(), "UTF-8");
             } catch (Exception e) {
                 System.out.println(e.getMessage());
                 return;
             }
-
             while (true) {
                 try {
-                    var d = new ArrayList<clientData>();
+
+                    JSONArray arr = new JSONArray();
                     for (var x : data) {
-                        d.add(x);
+                        var ob = new JSONObject().put("id", x.id()).put("port",x.port());
+                        arr.put(ob);
                     }
-                    sender.writeObject(d);
-                    List<clientData> indata;
-                    indata = (List<clientData>) reader.readObject();
+                    String json = new JSONObject().put("clients", arr).toString();
+                    sender.println(json);
+                    sender.flush();
+
+                    var injson = new JSONObject(reader.next()).getJSONArray("clients");
+                    var indata=new ArrayList<clientData>();
+                    for (int i = 0; i < injson.length(); i++) {
+                        var ob = injson.getJSONObject(i);
+                        indata.add(new clientData(ob.getInt("id"), ob.getInt("port")));
+                    }
                     data.clear();
                     for (var x : indata) {
                         data.add(x);
@@ -125,7 +116,7 @@ class server {
                 while (true) {
                     try {
                         String line = reciver.nextLine();
-                        line="#"+id+" :"+line;
+                        line = "#" + id + " :" + line;
                         for (Socket c : clients) {
                             if (c.getPort() == s.getPort())
                                 continue;

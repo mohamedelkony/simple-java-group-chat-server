@@ -1,43 +1,51 @@
 import java.util.*;
 import java.net.*;
 import java.io.*;
-
+import org.json.*;
 public class monitor {
     static int num = 0;
 
     public static void main(String[] args) {
         ServerSocket s = null;
         Socket c = null;
-        ObjectInputStream reader = null;
-        ObjectOutputStream oos = null;
-
+        PrintWriter sender = null;
+            Scanner reader = null;
+     
         try {
             s = new ServerSocket(45000);
             System.out.println("Monitor started");
             c = s.accept();
             System.out.println("Connected to server");
-            reader = new ObjectInputStream(c.getInputStream());
-            oos = new ObjectOutputStream(c.getOutputStream());
+            sender = new PrintWriter(new OutputStreamWriter(c.getOutputStream(), "UTF-8"), true);
+            reader = new Scanner(c.getInputStream(), "UTF-8");
         } catch (Exception e) {
             System.out.println(e.getMessage());
             return;
         }
         helper.clearConsole();
         while (true) {
-            List<clientData> data;
+            List<clientData> data=new ArrayList<clientData>();;
             try {
-                data = (List<clientData>) reader.readObject();
+                var injson = new JSONObject(reader.next()).getJSONArray("clients");
+                
+                for (int i = 0; i < injson.length(); i++) {
+                    var ob = injson.getJSONObject(i);
+                    data.add(new clientData(ob.getInt("id"), ob.getInt("port")));
+                }
             } catch (Exception e) {
                 System.out.println(e.getMessage() + "12");
                 return;
             }
             processData(data);
             try {
-                var d = new ArrayList<clientData>();
+                JSONArray arr = new JSONArray();
                 for (var x : data) {
-                    d.add(x);
+                    var ob = new JSONObject().put("id", x.id()).put("port",x.port());
+                    arr.put(ob);
                 }
-                oos.writeObject(d);
+                String json = new JSONObject().put("clients", arr).toString();
+                sender.println(json);
+                sender.flush();
             } catch (Exception e) {
                 System.out.println(e.getMessage());
             }
